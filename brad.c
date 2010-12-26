@@ -194,6 +194,8 @@ Image* applyCanny(Image* in)
 		c = i % nms->width;
 		if (l == 0 || l == nms->height - 1 || c == 0 || c == nms->width-1){
 			nms->data[i] = sobel->data[i];
+			if (max < nms->data[i]) max = nms->data[i];
+			if (min > nms->data[i]) min = nms->data[i];
 			continue;
 		}
 
@@ -222,13 +224,38 @@ Image* applyCanny(Image* in)
 
 		if (A > C || B > C) nms->data[i] = 0;
 		else nms->data[i] = sobel->data[i];
+
+		if (max < nms->data[i]) max = nms->data[i];
+		if (min > nms->data[i]) min = nms->data[i];
 	}
+	nms->max = max;
+	nms->min = min;
 
 	if (1){ // dump nms
 		toFile(nms, "nms.pgm");
 	}
 
-	return sobel;
+	freeImage(sobel);
+	freeImage(grad);
+
+	Image* t1 = copyMetadata(in);
+	Image* t2 = copyMetadata(in);
+	int T1, T2;
+
+	T1 = 100; T2 = 2 * T1;
+	for (i = 0; i < nms->size; i++){
+		if (nms->data[i] > T1) t1->data[i] = 255;
+		if (nms->data[i] > T2) t2->data[i] = 255;
+	}
+	t1->min = t2->min = 0;
+	t1->max = t2->max = 255;
+
+	if (1){ // dump Ts
+		toFile(t1, "t1.pgm");
+		toFile(t2, "t2.pgm");
+	}
+
+	return t2;
 }
 
 int main()
