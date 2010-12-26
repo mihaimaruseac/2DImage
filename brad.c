@@ -201,7 +201,7 @@ Image* applyCanny(Image* in)
 
 		C = sobel->data[i];
 		switch(grad->data[i]){
-			case 0:
+			case 90:
 				A = sobel->data[i - sobel->width];
 				B = sobel->data[i + sobel->width];
 				break;
@@ -209,7 +209,7 @@ Image* applyCanny(Image* in)
 				A = sobel->data[i - sobel->width - 1];
 				B = sobel->data[i + sobel->width + 1];
 				break;
-			case 90:
+			case 0:
 				A = sobel->data[i - 1];
 				B = sobel->data[i + 1];
 				break;
