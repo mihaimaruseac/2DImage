@@ -53,7 +53,7 @@ Image* applyGauss(Image *in)
 	int i = 0;
 
 	gauss->size = 5;
-	gauss->weight = 115;
+	gauss->weight = 159;
 	gauss->data = calloc(gauss->size * gauss->size,
 			sizeof(gauss->data[0]));
 
@@ -145,20 +145,90 @@ Image* applySobelY(Image* in)
 
 Image* applyCanny(Image* in)
 {
-	Image* out = applyGauss(in);
-	freeImage(in);
+	unsigned int i;
+	int max, min, maxg, ming;
+
+	Image* gauss = applyGauss(in);
+	
 	if (1){ // dump gauss
-		toFile(out, "gauss.pgm");
+		toFile(gauss, "gauss.pgm");
 	}
 
-	Image* sobelx = applySobelX(out);
-	Image* sobely = applySobelY(out);
+	Image* sobelx = applySobelX(gauss);
+	Image* sobely = applySobelY(gauss);
+	Image* sobel = copyMetadata(gauss);
+	Image* grad = copyMetadata(gauss);
+	freeImage(gauss);
+
+	min = 0; max = 0; ming = 0; maxg = 0;
+	for (i = 0; i < sobel->size; i++){
+		sobel->data[i] = abs(sobelx->data[i]) + abs(sobely->data[i]);
+		grad->data[i] = gradDir(sobelx->data[i], sobely->data[i]);
+		if (max < sobel->data[i])
+			max = sobel->data[i];
+		if (min > sobel->data[i])
+			min = sobel->data[i];
+		if (maxg < grad->data[i])
+			maxg = grad->data[i];
+		if (ming > grad->data[i])
+			ming = grad->data[i];
+	}
+	sobel->max = max;
+	sobel->min = min;
+	
 	if (1){ // dump sobel
 		toFile(sobelx, "sobelx.pgm");
 		toFile(sobely, "sobely.pgm");
+		toFile(sobel, "sobel.pgm");
+		toFile(grad, "grad.pgm");
 	}
 
-	return out;
+	freeImage(sobelx);
+	freeImage(sobely);
+	Image* nms = copyMetadata(sobel);
+
+	min = max = 0;
+	unsigned int A, B, C, l, c;
+	for (i = 0; i < nms->size; i++){
+		l = i / nms->width;
+		c = i % nms->width;
+		if (l == 0 || l == nms->height - 1 || c == 0 || c == nms->width-1){
+			nms->data[i] = sobel->data[i];
+			continue;
+		}
+
+		C = sobel->data[i];
+		switch(grad->data[i]){
+			case 0:
+				A = sobel->data[i - sobel->width];
+				B = sobel->data[i + sobel->width];
+				break;
+			case 45:
+				A = sobel->data[i - sobel->width - 1];
+				B = sobel->data[i + sobel->width + 1];
+				break;
+			case 90:
+				A = sobel->data[i - 1];
+				B = sobel->data[i + 1];
+				break;
+			case 135:
+				A = sobel->data[i - sobel->width + 1];
+				B = sobel->data[i + sobel->width - 1];
+				break;
+			default:
+				warn("Unhandled direction %d", grad->data[i]);
+				nms->data[i] = sobel->data[i];
+		}
+
+		if (A > C || B > C) nms->data[i] = 0;
+		else nms->data[i] = sobel->data[i];
+	}
+
+	if (1){ // dump nms
+		toFile(nms, "nms.pgm");
+	}
+
+	return sobel;
 }
 
 int main()
@@ -183,5 +253,6 @@ int main()
 		toFile(canny, "canny.pgm");
 	}
 
+	freeImage(canny);
 	return 0;
 }

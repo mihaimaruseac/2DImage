@@ -7,6 +7,7 @@
  * Globals
  */
 
+#include <math.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -187,5 +188,22 @@ Image* applyFilter(Image *in, Filter* f)
 	out->min = min;
 
 	return out;
+}
+
+int gradDir(int dx, int dy)
+{
+	if (dy == 0) return 0;
+	if (dx == 0) return 90;
+
+	double a = atan(dy / dx) * 180 / 3.1416 + 90;
+
+	if (a > 0 && a < 22.5) return 0;
+	if (a > 22.5 && a < 67.5) return 45;
+	if (a > 67.5 && a < 112.5) return 90;
+	if (a > 112.5 && a < 157.5) return 135;
+	if (a > 157.5 && a < 180) return 0;
+
+	warn("%d %d %lf", dx, dy, a);
+	return 0;
 }
 

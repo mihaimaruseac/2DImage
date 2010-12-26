@@ -42,4 +42,6 @@ Image* copyMetadata(Image* in);
 
 Image* applyFilter(Image* in, Filter* f);
 
+int gradDir(int dx, int dy);
+
 #endif
