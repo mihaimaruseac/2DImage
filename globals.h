@@ -14,7 +14,7 @@
 #define RGB 3
 
 #define TGAHEADER {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-#define PGMHEADER "P2\n#Created by MM\n"
+#define PGMHEADER "P2\n# Created by MM\n"
 
 #define warn(msg, ...) fprintf(stderr, "WARN: "msg"\n", ##__VA_ARGS__)
 #define die(msg, ...) do{\
@@ -23,13 +23,23 @@
 } while(0)
 
 typedef struct Image{
-	unsigned char* data;
-	unsigned int width, height;
-	unsigned int max, bpp, size;
+	int* data;
+	unsigned int width, height, size, bpp;
+	int max, min;
 } Image;
+
+typedef struct Filter{
+	int* data;
+	unsigned int size;
+	unsigned int weight;
+} Filter;
 
 Image* fromFile(const char* fname);
 void toFile(Image* img, const char* fname);
 void freeImage(Image* img);
+
+Image* copyMetadata(Image* in);
+
+Image* applyFilter(Image* in, Filter* f);
 
 #endif
