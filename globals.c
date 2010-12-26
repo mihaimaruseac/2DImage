@@ -18,7 +18,7 @@ Image* fromFile(const char* fname)
 	Image* img;
 	unsigned char header[12], imgheader[6], tmp;
 	unsigned char TGAheader[12] = TGAHEADER;
-	unsigned int size, i;
+	unsigned int i;
 
 	FILE* f = fopen(fname, "rb");
 	if (f == NULL)
@@ -43,12 +43,13 @@ Image* fromFile(const char* fname)
 	if (imgheader[4] / 8 != RGB)
 		die("Only RGB is handled");
 
-	size = img->width * img->height * RGB;
-	img->data = calloc(size, sizeof(img->data[0]));
-	if (fread(img->data, 1, size, f) != size)
+	img->size = img->width * img->height * RGB;
+	img->data = calloc(img->size, sizeof(img->data[0]));
+	if (fread(img->data, 1, img->size, f) != img->size)
 		die("Invalid input file");
 
-	for (i = 0; i < size; i += RGB){
+	img->bpp = RGB;
+	for (i = 0; i < img->size; i += RGB){
 		tmp = img->data[i];
 		img->data[i] = img->data[i+2];
 		img->data[i+2] = tmp;
@@ -58,10 +59,10 @@ Image* fromFile(const char* fname)
 	return img;
 }
 
-void toFile(Image* img, const char* fname)
+static void toTGAFile(Image* img, const char* fname)
 {
 	unsigned char TGAheader[12] = TGAHEADER, imgheader[6], tmp;
-	unsigned int size, i;
+	unsigned int i;
 
 	FILE* f = fopen(fname, "wb");
 	if (f == NULL)
@@ -80,17 +81,47 @@ void toFile(Image* img, const char* fname)
 	if (fwrite(imgheader, 1, sizeof(imgheader), f) != sizeof(imgheader))
 		die("Unable to save image");
 
-	size = img->width * img->height * RGB;
-
-	for (i = 0; i < size; i += RGB){
+	for (i = 0; i < img->size; i += RGB){
 		tmp = img->data[i];
 		img->data[i] = img->data[i+2];
 		img->data[i+2] = tmp;
 	}
 
-	if (fwrite(img->data, 1, size, f) != size)
+	if (fwrite(img->data, 1, img->size, f) != img->size)
 		die("Unable to save image");
 
 	fclose(f);
+}
+
+static void toPGMFile(Image* img, const char* fname)
+{
+	FILE* f = fopen(fname, "w");
+	unsigned int i;
+
+	fprintf(f, PGMHEADER);
+	fprintf(f, "%d %d\n%d\n", img->width, img->height, img->max);
+
+	for (i = 0; i < img->size; i++){
+		fprintf(f, "%d ", img->data[i]);
+		if (i % img->width == img->width - 1)
+			fprintf(f, "\n");
+	}
+
+	fclose(f);
+}
+
+void toFile(Image* img, const char* fname)
+{
+	if (img->bpp != RGB){
+		toPGMFile(img, fname);
+	} else {
+		toTGAFile(img, fname);
+	}
+}
+
+void freeImage(Image* img)
+{
+	free(img->data);
+	free(img);
 }
 
