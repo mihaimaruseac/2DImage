@@ -651,7 +651,7 @@ int main()
 	Image *canny = applyCanny(grayscaled);
 	freeImage(grayscaled);
 
-#if 0
+#if 1
 	canny->width = 15;
 	canny->height = 15;
 	canny->size = canny->width * canny->height;
