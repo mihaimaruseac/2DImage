@@ -17,7 +17,7 @@
 Image* fromFile(const char* fname)
 {
 	Image* img;
-	unsigned char header[12], imgheader[6], tmp;
+	unsigned char header[12], imgheader[6];
 	unsigned char TGAheader[12] = TGAHEADER;
 	unsigned int i;
 	unsigned char* data;
@@ -64,7 +64,7 @@ Image* fromFile(const char* fname)
 
 static void toTGAFile(Image* img, const char* fname)
 {
-	unsigned char TGAheader[12] = TGAHEADER, imgheader[6], tmp;
+	unsigned char TGAheader[12] = TGAHEADER, imgheader[6];
 	unsigned int i;
 	unsigned char* data;
 
@@ -195,13 +195,17 @@ int gradDir(int dx, int dy)
 	if (dy == 0) return 0;
 	if (dx == 0) return 90;
 
-	double a = atan(dy / dx) * 180 / 3.1416 + 90;
+	double a = atan2(dy, dx) * 180 / PI + 180;
 
 	if (a > 0 && a < 22.5) return 0;
 	if (a > 22.5 && a < 67.5) return 45;
 	if (a > 67.5 && a < 112.5) return 90;
 	if (a > 112.5 && a < 157.5) return 135;
-	if (a > 157.5 && a < 180) return 0;
+	if (a > 157.5 && a < 202.5) return 0;
+	if (a > 202.5 && a < 247.5) return 45;
+	if (a > 247.5 && a < 292.5) return 90;
+	if (a > 292.5 && a < 337.5) return 135;
+	if (a > 337.5 && a < 360) return 0;
 
 	warn("%d %d %lf", dx, dy, a);
 	return 0;

@@ -2,7 +2,7 @@
 
 TARGET = ./brad
 CC = gcc
-CPPFLAGS = -Wall -Wextra -g -O0 -Wno-unused
+CPPFLAGS = -Wall -Wextra -g -O0# -Wno-unused
 LDFLAGS = -lm
 OBJS = globals.o
 

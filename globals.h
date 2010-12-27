@@ -16,6 +16,8 @@
 #define TGAHEADER {0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 #define PGMHEADER "P2\n# Created by MM\n"
 
+#define PI 3.1416
+
 #define warn(msg, ...) fprintf(stderr, "WARN: "msg"\n", ##__VA_ARGS__)
 #define die(msg, ...) do{\
 	fprintf(stderr, "FATAL: "msg"\n", ##__VA_ARGS__);\
