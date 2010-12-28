@@ -431,8 +431,10 @@ void drawLine(int ang, int r, Image* out, Image* in)
 					st = -1;
 					continue;
 				}
-				for (i = st; i < en; i++)
+				for (i = st; i < en; i++){
+					if (i >= (int)out->size) continue;
 					out->data[i] = 255;
+				}
 				st = -1;
 			}
 		}
@@ -633,6 +635,170 @@ Image* applyHoughLines(Image* in)
 	return out;
 }
 
+Image* applyHoughCircles(Image* in)
+{
+	Image* out = copyMetadata(in);
+	int space, size;
+	int *cxs, *cys, *rs, *ws;
+	int i, x1, x2, x3, y1, y2, y3, j, ok;
+	int A1, A2, B1, B2, C1, C2, D;
+	int cx, cy, r;
+	int nonzeros[in->size], nzc;
+
+	nzc = 0;
+	for (i = 0; i < (int)in->size; i++){
+		if (in->data[i] != 0)
+			nonzeros[nzc++] = i;
+	}
+
+	space = 100; size = 0;
+	cxs = calloc(space, sizeof(cxs[0]));
+	cys = calloc(space, sizeof(cys[0]));
+	rs = calloc(space, sizeof(rs[0]));
+	ws = calloc(space, sizeof(ws[0]));
+
+	srand(42);
+
+	for (i = 0; i < 100000; i++){
+		j = nonzeros[rand() % nzc];
+		x1 = j % in->width;
+		y1 = j / in->height;
+		j = nonzeros[rand() % nzc];
+		x2 = j % in->width;
+		y2 = j / in->height;
+		j = nonzeros[rand() % nzc];
+		x3 = j % in->width;
+		y3 = j / in->height;
+
+//		warn("%d %d / %d %d / %d %d", x1, y1, x2, y2, x3, y3);
+		A1 = x2 - x1; A2 = x3 - x1;
+		B1 = y2 - y1; B2 = y3 - y1;
+		C1 = (x2*x2 + y2*y2 - x1*x1 - y1*y1) / 2;
+		C2 = (x3*x3 + y3*y3 - x1*x1 - y1*y1) / 2;
+		D = A1 * B2 - A2 * B1;
+		if (D < 2){
+			i--;
+			continue;
+		}
+//		warn("ABC %d %d/%d %d/%d %d", A1, A2, B1, B2, C1, C2);
+
+		cx = (C1 * B2 - C2 * B1) / D;
+		cy = (A1 * C2 - A2 * C1) / D;
+//		warn("c %lf %lf", cx, cy);
+
+		r = round(sqrt((cx - x1) * (cx - x1) + (cy - y1) * (cy - y1)));
+		if (r > /*(int)in->height / 2*/  128){
+			i--;
+			continue;
+		}
+//		warn("rD %lf %d", r, D);
+
+		ok = -1;
+		for (j = 0; j < size; j++){
+			if (abs(cx - cxs[j]) < 5 && abs(cy - cys[j]) < 5 &&
+				abs(r - rs[j]) < 5){
+				ok = j;
+				break;
+			}
+		}
+		if (ok == -1){
+			if (size == space){
+				space *= 2;
+				cxs = realloc(cxs, space * sizeof(cxs[0]));
+				cys = realloc(cys, space * sizeof(cys[0]));
+				rs = realloc(rs, space * sizeof(rs[0]));
+				ws = realloc(ws, space * sizeof(ws[0]));
+			}
+			cxs[size] = cx;
+			cys[size] = cy;
+			rs[size] = r;
+			ws[size] = 1;
+			size++;
+			continue;
+		}
+
+		ws[ok]++;
+
+		if (i % 1000 == 999){printf("."); fflush(stdout);}
+	}
+
+	ok = 0;
+	for (i = 0; i < size; i++){
+		if (ok < ws[i]) ok = ws[i];
+	}
+	warn("OK: %d", ok);
+	for (i = 0; i < size; i++){
+		if (ok == ws[i]){
+			warn("[%d] %d %d %d %d", i, cxs[i], cys[i], rs[i], ws[i]);
+		}
+	}
+
+#if 0
+	unsigned int K = in->height/20;
+	unsigned int acc[in->width][in->height][K], i, j, k, x, y, r, max;
+	unsigned int val1, val2;
+
+	for (i = 0; i < in->width; i++){
+		for (j = 0; j < in->height; j++){
+			for (k = 0; k < K; k++){
+				acc[i][j][k] = 0;
+			}
+		}
+	}
+
+	printf("Starting circle searching...\n");
+
+	unsigned int perc = 0;
+	for (i = 0; i < in->size; i++){
+		if (i * 100 / in->size > perc + 5){
+			perc += 5;
+			printf("%u%%...\n", perc);
+		}
+		if (in->data[i] == 255){
+			x = i % in->width;
+			y = i / in->width;
+			for (j = 0; j < in->width; j++){
+				val1 = j - x;
+				val1 *= val1;
+				for (k = 0; k < in->height; k++){
+					val2 = k - y;
+					val2 *= val2;
+					r = round(sqrt(val1 + val2));
+					if (r >= K) continue;
+					acc[j][k][r]++;
+				}
+			}
+		}
+	}
+
+	printf("Circle searched... Finding circles\n");
+
+	max = 0;
+	for (i = 0; i < in->width; i++){
+		for (j = 0; j < in->height; j++){
+			for (k = 0; k < K; k++){
+				if (max < acc[i][j][k]){
+					max = acc[i][j][k];
+				}
+			}
+		}
+	}
+	warn("%d\n", max);
+
+	for (i = 0; i < in->width; i++){
+		for (j = 0; j < in->height; j++){
+			for (k = 0; k < K; k++){
+				if (acc[i][j][k] > 0.5 * max){
+					warn("x:%d y:%d r:%d", i, j, k);
+				}
+			}
+		}
+	}
+#endif
+
+	return out;
+}
+
 int main()
 {
 	Image *in = fromFile("a.tga");
@@ -651,28 +817,20 @@ int main()
 	Image *canny = applyCanny(grayscaled);
 	freeImage(grayscaled);
 
-#if 1
-	canny->width = 15;
-	canny->height = 15;
-	canny->size = canny->width * canny->height;
-	canny->data = calloc(canny->size, sizeof(canny->data[0]));
-	unsigned int i = 5 + 2 * canny->width;
-	while (i < 14 + 2 * canny->width){
-		canny->data[i] = 255;
-		i += 1;
-	}
-#endif
-
 	if (1) { // dump canny
 		toFile(canny, "canny.pgm");
 	}
 
 	Image* lines = applyHoughLines(canny);
+	Image* circles = applyHoughCircles(canny);
 
 	if (1) { // dump Hough transforms
 		toFile(lines, "lines.pgm");
+		toFile(circles, "circles.pgm");
 	}
 
 	freeImage(canny);
+	freeImage(lines);
+	freeImage(circles);
 	return 0;
 }
