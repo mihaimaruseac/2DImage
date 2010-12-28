@@ -11,13 +11,13 @@ all: $(TARGET)
 $(TARGET): $(OBJS)
 
 clean:
-	rm -f $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET) *.pgm
 
 purge:
-	rm -rf $(OBJS) $(TARGET) tags html
+	rm -rf $(OBJS) $(TARGET) tags html *.pgm
 
 test: $(TARGET)
-	$(TARGET)
+	$(TARGET) a.tga result.pgm 1
 
 doc:
 	doxygen

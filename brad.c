@@ -14,6 +14,8 @@
 
 #include "globals.h"
 
+int dumps;
+
 Image* toGrayScale(Image* in)
 {
 	unsigned int i, l, c, max = 0, value;
@@ -243,8 +245,8 @@ Image* applyCanny(Image* in)
 
 	Image* gauss = applyGauss(in);
 	
-	if (1){ // dump gauss
-		toFile(gauss, "gauss.pgm");
+	if (dumps){ // dump gauss
+		toFile(gauss, "__03__gauss.pgm");
 	}
 
 	Image* sobelx = applySobelX(gauss);
@@ -269,11 +271,11 @@ Image* applyCanny(Image* in)
 	sobel->max = max;
 	sobel->min = min;
 	
-	if (1){ // dump sobel
-		toFile(sobelx, "sobelx.pgm");
-		toFile(sobely, "sobely.pgm");
-		toFile(sobel, "sobel.pgm");
-		toFile(grad, "grad.pgm");
+	if (dumps){ // dump sobel
+		toFile(sobelx, "__04__sobelx.pgm");
+		toFile(sobely, "__05__sobely.pgm");
+		toFile(sobel, "__06__sobel.pgm");
+		toFile(grad, "__07__grad.pgm");
 	}
 
 	freeImage(sobelx);
@@ -328,8 +330,8 @@ Image* applyCanny(Image* in)
 	nms->max = max;
 	nms->min = min;
 
-	if (1){ // dump nms
-		toFile(nms, "nms.pgm");
+	if (dumps){ // dump nms
+		toFile(nms, "__08__nms.pgm");
 	}
 
 	Image* t1 = copyMetadata(in);
@@ -344,9 +346,9 @@ Image* applyCanny(Image* in)
 	t1->min = t2->min = 0;
 	t1->max = t2->max = 255;
 
-	if (1){ // dump Ts
-		toFile(t1, "t1.pgm");
-		toFile(t2, "t2.pgm");
+	if (dumps){ // dump Ts
+		toFile(t1, "__09__t1.pgm");
+		toFile(t2, "__10__t2.pgm");
 	}
 
 	Image* canny = copyMetadata(t1);
@@ -787,34 +789,41 @@ void highlight(Image* out, Image* probe, unsigned int seed)
 		highlight(out, probe, i);
 }
 
-int main()
+int main(int argc, char** argv)
 {
-	Image *in = fromFile("a.tga");
+	if (argc != 3 && argc != 4){
+		die("Usage: ./brad input output [dumps]");
+	}
 
-	if (1){ // dump input
-		toFile(in, "input.tga");
+	if (argc == 4) dumps = 1;
+	else dumps = 0;
+
+	Image *in = fromFile(argv[1]);
+
+	if (dumps){ // dump input
+		toFile(in, "__01__input.tga");
 	}
 
 	Image *grayscaled = toGrayScale(in);
 	freeImage(in);
 
-	if (1){ // dump grayscale
-		toFile(grayscaled, "grayscale.pgm");
+	if (dumps){ // dump grayscale
+		toFile(grayscaled, "__02__grayscale.pgm");
 	}
 
 	Image *canny = applyCanny(grayscaled);
 	freeImage(grayscaled);
 
-	if (1) { // dump canny
-		toFile(canny, "canny.pgm");
+	if (dumps) { // dump canny
+		toFile(canny, "__11__canny.pgm");
 	}
 
 	Image* lines = applyHoughLines(canny);
 	Image* circles = applyHoughCircles(canny);
 
-	if (1) { // dump Hough transforms
-		toFile(lines, "lines.pgm");
-		toFile(circles, "circles.pgm");
+	if (dumps) { // dump Hough transforms
+		toFile(lines, "__12__lines.pgm");
+		toFile(circles, "__13__circles.pgm");
 	}
 
 	Image* out = copyMetadata(canny);
@@ -848,12 +857,11 @@ int main()
 	}
 	out->max = 255;
 
-	if (1){
-		toFile(out, "result.pgm");
-	}
+	toFile(out, argv[2]);
 
 	freeImage(canny);
 	freeImage(lines);
 	freeImage(circles);
+	freeImage(out);
 	return 0;
 }
